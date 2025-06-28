@@ -1,0 +1,67 @@
+From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat.
+
+Definition f x y := x + y.
+
+Notation "x" := (f x _) (at level 0, x at level 10, format "x", only printing). (* TODO: mettre dans un scope *)
+Definition g n := n - 3.
+Check f (g 2) 4.
+Check f (2 + 2) 4 = 12.
+Check f (g 2) 4 * 2 = 12.
+
+(* level 10 est un choix arbitraire mais raisonnable *)
+
+Variant reverseCoercionProtected' {T T' : Type} : T -> Type :=
+  | ReverseCoercionProtected' (coercion : T' -> T) (xres : T') : reverseCoercionProtected' (coercion xres).
+
+Definition reverse_coercion'' : forall {T T' : Type}, forall (xsource : T), @reverseCoercionProtected' T T' xsource -> T' :=
+  fun T T' xsource '(ReverseCoercionProtected' _ xres) => xres.
+
+Notation "x" := (reverse_coercion'' x _) (at level 0, x at level 200, only printing). (* TODO: mettre dans un scope *)
+
+Goal @reverse_coercion'' nat bool (1 + 0) (ReverseCoercionProtected' nat_of_bool true) = true.
+rewrite addn0.
+
+
+
+
+
+
+(* variante sans la preuve d'égalité *)
+
+Variant reverseCoercionProtected {T : Type} (xsource : ReverseCoercionSource T) : Type :=
+  | ReverseCoercionProtected.
+
+Definition reverse_coercion' : forall {T T' : Type}, forall (xres : T') (coercion : T' -> T), @reverseCoercionProtected T (coercion xres) -> ReverseCoercionTarget T' :=
+  fun T T' xres coercion ph => xres.
+
+Coercion ReverseCoercionProtected : ReverseCoercionSource >-> reverseCoercionProtected.
+Coercion reverse_coercion' : reverseCoercionProtected >-> ReverseCoercionTarget.
+
+(* Set Printing All. *)
+Check true : nat.
+
+Goal @reverse_coercion' nat bool true nat_of_bool (@ReverseCoercionProtected nat (1 + 0)) = true.
+rewrite addn0.
+
+(* TODO: implem *)
+
+
+
+(*
+T' : nat
+T : bool
+coe : nat_of_bool
+*)
+
+Section Test0.
+Variables T T' : Type.
+Variable x : T'.
+Variable coe : T' -> T.
+Coercion coe : T' >-> T.
+
+Check @reverse_coercion' T T' x coe (ReverseCoercionPhantom T (coe x)).
+
+
+
+Print ReverseCoercionSource.
+Print ReverseCoercionTarget.
